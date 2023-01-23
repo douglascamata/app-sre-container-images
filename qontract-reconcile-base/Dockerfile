@@ -15,7 +15,7 @@ ENV TF_VERSION=0.13.7
 ENV HELM_VERSION=3.6.2
 ENV GIT_SECRETS_VERSION=1.3.0
 ENV PROMETHEUS_VERSION=2.33.3
-ENV ALERTMANAGER_VERSION=0.24.0
+ENV ALERTMANAGER_VERSIONS="0.24.0 0.25.0"
 
 
 RUN for version in ${TF_PROVIDER_AWS_VERSIONS}; do \
@@ -87,8 +87,12 @@ RUN curl -sfL https://github.com/prometheus/prometheus/releases/download/v${PROM
     | tar -zxf - -C /usr/local/bin --strip-components=1 prometheus-${PROMETHEUS_VERSION}.linux-amd64/promtool
 
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
-RUN curl -sfL https://github.com/prometheus/alertmanager/releases/download/v${ALERTMANAGER_VERSION}/alertmanager-${ALERTMANAGER_VERSION}.linux-amd64.tar.gz \
-    | tar -zxf - -C /usr/local/bin --strip-components=1 alertmanager-${ALERTMANAGER_VERSION}.linux-amd64/amtool
+RUN for version in ${ALERTMANAGER_VERSIONS}; do \
+    curl -sfL https://github.com/prometheus/alertmanager/releases/download/v${version}/alertmanager-${version}.linux-amd64.tar.gz  \
+    | tar -zxf - --strip-components=1 alertmanager-${version}.linux-amd64/amtool; \
+    mv amtool /usr/local/bin/amtool-${version}; \
+    chmod +x /usr/local/bin/amtool-${version}; \
+    done
 
 
 FROM registry.access.redhat.com/ubi8/ubi-minimal:8.4
@@ -109,7 +113,7 @@ COPY --chown=0:0 --from=downloader \
     /usr/local/bin/helm \
     /usr/local/bin/git-secrets \
     /usr/local/bin/promtool \
-    /usr/local/bin/amtool \
+    /usr/local/bin/amtool-* \
     /usr/bin/skopeo \
     /usr/local/bin/
 
